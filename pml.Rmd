@@ -1,0 +1,105 @@
+---
+title: "Practical Machine Learning Project Report"
+author: "Punyashree PB"
+output: html_document
+---
+
+###PROBLEM STATEMENT:
+The goal of this project is to predict or classify new exercises using a subset of predictiors from the data (Predicting the `classe` vairalbe), using data recorded from four types of body sensors during body building exercises. After applying various data cleanup and preprossesing techniques, a training model was built to predict 20 observations from a test dataset. In this document, explained the methods and results obtained.
+
+###DATA:
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+###METHODOLOGY
+####Loading Required Packages
+
+```{r, message=FALSE}
+library(rpart)
+library(caret)
+library(randomForest)
+```
+
+####Loading Data:
+```{r}
+train <- read.csv("pml-training.csv", na.strings=c("", "NA", "NULL"))
+test <- read.csv("pml-testing.csv", na.strings=c("", "NA", "NULL"))
+```
+
+####Data Pre-processing
+Lets remove the columns containing _NA's_ from the data
+```{r}
+train <-train[,colSums(is.na(train)) == 0]
+test <-test[,colSums(is.na(test)) == 0]
+```
+
+Lets remove the unwanted columns fromt he data
+```{r}
+train   <-train[,-c(1:7)]
+test <-test[,-c(1:7)]
+```
+
+####Data Partition
+Lets partition the train data in to training and validation set.
+```{r}
+trainset <- createDataPartition(train$classe, p = 0.8, list = FALSE)
+Training <- train[trainset, ]
+Validation <- train[-trainset, ]
+```
+
+####Histogram Plot
+Lets draw a simple histogram plot for the prediction variable.
+```{r hist_plot, fig.height=4, fig.width=6}
+plot(Training$classe, col="gray", 
+     main="Histogram of Predicting variable(classe) in Training set", 
+     xlab="classe levels", ylab="Frequency")
+```
+
+####Building Model
+Lets use reandom forest for building the model.
+```{r}
+rfMod <- randomForest(classe ~. , data=Training, method="class")
+rfMod
+```
+
+####Cross Validation.
+Lets cross validate using the Validation set
+```{r}
+rfPred <- predict(rfMod, Validation, type = "class")
+confusionMatrix(rfPred, Validation$classe)
+```
+
+The Cross validation accuracy is **99.5%** so the out of sample error is **0.5%**, which confirms our model has performed good.
+
+####Test Prediction
+Lets predict the test set using the our model _rfMod_
+```{r}
+testPred <- predict(rfMod, test, type="class")
+testPred
+```
+
+Lets save the output as txt files as mentioned in the submission instructions using the following code, which was given as the submission instructions.
+
+```{r}
+answers <- as.character(testPred)
+
+pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+        filename = paste0("problem_id_",i,".txt")
+        write.table(x[i], file=filename, quote=FALSE, row.names=FALSE, 
+                    col.names=FALSE)
+    }
+}
+
+pml_write_files(answers)
+```
+
+###CONCLUSION
+1. Used Random Forest to create the model. 
+2. Cross Validation is done and the out of sample error is found out to be **0.5%** which is pretty good model.
